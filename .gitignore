@@ -1,0 +1,20 @@
+# Compiled object files
+*.o
+
+# Executable files
+stairs
+
+# Output files
+output.txt
+
+# CLion specific files
+.idea/
+cmake-build-debug/
+cmake-build-release/
+cmake-build-*
+
+# VSCode specific files
+.vscode/
+
+# macOS specific files
+.DS_Store
