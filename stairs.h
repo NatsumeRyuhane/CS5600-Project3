@@ -12,7 +12,7 @@
 typedef struct thread_arg {
     int index;
     int direction;
-} thread_arg_t;
+} p_thread_arg_t;
 
 
 // global constants
