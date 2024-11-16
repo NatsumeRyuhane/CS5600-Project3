@@ -30,6 +30,11 @@ void *threadfunction(void *vargp) {
 }
 
 int main(int argc, char *argv[]) {
+    sem_init(&sem, 0, MAX_STAIR_STEPS);
+    start_times = malloc(MAX_THREADS_COUNT * sizeof(struct timeval));
+    end_times = malloc(MAX_THREADS_COUNT * sizeof(struct timeval));
+    tid = malloc(MAX_THREADS_COUNT * sizeof(pthread_t));
+
     //printf("Number of Customers: %d\nNumber of stairs: %d\n", ...., .....);
     logger("main", "Program initialized with following parameters:");
     logger("main", sprintf("  Number of Customers: %d", MAX_THREADS_COUNT));
@@ -44,21 +49,25 @@ int main(int argc, char *argv[]) {
     // fill the array with threads with randomized direction
     for (int i = 0; i < MAX_THREADS_COUNT; i++) {
         threads[i].index = i;
-        threads[i].direction = rand() % 3 - 2;
+        threads[i].direction = (rand() % 2) * 2 - 1;
         pthread_create(&tid[i], NULL, threadfunction, (void *) &threads[i]);
     }
 
     // your code here
 
     // for each thread created, call pthread_join(..)
-
-
-
+    for (int i = 0; i < MAX_THREADS_COUNT; i++) {
+        pthread_join(tid[i], NULL);
+    }
 
     // printf turnaround time for each thread and average turnaround time
 
     // free every pointer you used malloc for
-
+    free(start_times);
+    free(end_times);
+    free(tid);
+    free(threads);
+    sem_destroy(&sem);
 
     return 0;
 }

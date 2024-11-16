@@ -44,6 +44,18 @@ enum DIRECTION {
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 sem_t sem;
 
+int current_direction = IDLE;
+int upstairs_count = 0;
+int downstairs_count = 0;
+
+// Prevent starvation
+int waiting_up = 0;
+int waiting_down = 0;
+
+// Calculate turnaround time
+struct timeval *start_times;
+struct timeval *end_times;
+
 
 // write any helper functions you need here
 void logger(char* source, char* message);
