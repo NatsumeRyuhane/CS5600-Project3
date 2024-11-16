@@ -9,9 +9,12 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+// This structure is used to pass arguments to the thread function
 typedef struct thread_arg {
     int index;
     int direction;
+    struct timeval start_time;
+    struct timeval end_time;
 } p_thread_arg_t;
 
 
@@ -28,10 +31,8 @@ typedef struct thread_arg {
 // define timing variables
 int global_time = 0;
 
-
-// thread
+// Head of thread array
 pthread_t* tid;
-
 
 // Define global variables on the allowed direction, waiting threads, ...
 enum DIRECTION {
@@ -40,8 +41,10 @@ enum DIRECTION {
     DOWN = -1
 };
 
-
+// Mutex for preventing race condition
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+// Semaphore for stairs
 sem_t sem;
 
 int current_direction = IDLE;
@@ -51,10 +54,6 @@ int downstairs_count = 0;
 // Prevent starvation
 int waiting_up = 0;
 int waiting_down = 0;
-
-// Calculate turnaround time
-struct timeval *start_times;
-struct timeval *end_times;
 
 
 // write any helper functions you need here

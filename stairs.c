@@ -31,8 +31,6 @@ void *threadfunction(void *vargp) {
 
 int main(int argc, char *argv[]) {
     sem_init(&sem, 0, MAX_STAIR_STEPS);
-    start_times = malloc(MAX_THREADS_COUNT * sizeof(struct timeval));
-    end_times = malloc(MAX_THREADS_COUNT * sizeof(struct timeval));
     tid = malloc(MAX_THREADS_COUNT * sizeof(pthread_t));
 
     //printf("Number of Customers: %d\nNumber of stairs: %d\n", ...., .....);
@@ -63,8 +61,6 @@ int main(int argc, char *argv[]) {
     // printf turnaround time for each thread and average turnaround time
 
     // free every pointer you used malloc for
-    free(start_times);
-    free(end_times);
     free(tid);
     free(threads);
     sem_destroy(&sem);
