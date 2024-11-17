@@ -123,11 +123,27 @@ void *threadfunction(void *vargp) {
 }
 
 int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        fprintf(stderr, "Input error: Usage: %s <num_customers> <num_stairs>\n", argv[0]);
+        return 1;
+    }
+
     int num_customers = atoi(argv[1]);
     globals.num_customers = num_customers;
     int num_stairs = atoi(argv[2]);
     globals.num_stairs = num_stairs;
     one_direction_quota = num_stairs;  // It should be not smaller than num_stairs
+
+    // Validate input
+    if (num_customers <= 0 || num_customers > MAX_THREADS_COUNT) {
+        fprintf(stderr, "Number of customers must be between 1 and %d\n", MAX_THREADS_COUNT);
+        return 1;
+    }
+
+    if (num_stairs <= 0 || num_stairs > MAX_STAIR_STEPS) {
+        fprintf(stderr, "Number of stairs must be between 1 and %d\n", MAX_STAIR_STEPS);
+        return 1;
+    }
 
     // sem_init(.....);
     sem_init(&up_sem, 0, 0);
@@ -136,6 +152,7 @@ int main(int argc, char *argv[]) {
 
     //printf("Number of Customers: %d\nNumber of stairs: %d\n", ...., .....);
     logger("main", "Program initialized with following parameters:");
+    printf("Number of Customers: %d\nNumber of stairs: %d\n", num_customers, num_stairs);
 
     // generate an array of threads, set their direction randomly, call pthread_create,
     // initializing an array of customers
@@ -163,9 +180,24 @@ int main(int argc, char *argv[]) {
     }
     logger("main", "Threads finished");
 
+    // printf turnaround time for each thread and average turnaround time
+    double total_time = 0;
+    for (int i = 0; i < num_customers; i++) {
+        int turnaround = (threads[i].end_time - threads[i].start_time);
+        printf("Customer %d turnaround time: %.2f seconds\n", i, turnaround);
+        total_time += turnaround;
+    }
+
+    printf("Average turnaround time: %.2f seconds\n", total_time / num_customers);    
+
+
     // free every pointer you used malloc for
     free(tid);
     free(threads);
+    sem_destroy(&up_sem);
+    sem_destroy(&down_sem);
+    pthread_mutex_destroy(&mutex);
 
     return 0;
 }
+
