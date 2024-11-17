@@ -13,8 +13,8 @@
 typedef struct thread_arg {
     int index;
     int direction;
-    struct timeval start_time;
-    struct timeval end_time;
+    int start_time;
+    int end_time;
 } p_thread_arg_t;
 
 
@@ -45,15 +45,31 @@ enum DIRECTION {
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Semaphore for stairs
-sem_t sem;
+sem_t up_sem;
+sem_t down_sem;
+
+struct GLOBALS {
+    int time;
+    int finished_customers;
+    int num_stairs;
+    int num_customers;
+}
+
+struct GLOBALS globals;
+globals.time = 0;
+globals.finished_customers = 0;
+globals.num_stairs = 0;
+globals.num_customers = 0;
 
 int current_direction = IDLE;
-int upstairs_count = 0;
-int downstairs_count = 0;
+int num_customers
+int num_stairs
+int customer_on_stairs = 0;  // Number of customers on the stairs
 
 // Prevent starvation
-int waiting_up = 0;
-int waiting_down = 0;
+int one_direction_quota;
+int waiting_down
+int waiting_up
 
 
 // write any helper functions you need here
