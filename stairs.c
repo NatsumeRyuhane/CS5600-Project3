@@ -94,13 +94,13 @@ void sempost(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
             int to_release = (waiting_down > MAX_STAIR_STEPS) ? MAX_STAIR_STEPS : waiting_down;
             waiting_down -= to_release;
             for (int i = 0; i < to_release; i++) {
-                sem_post(&down_sem);
+                sem_post(down_sem);
             }
         } else if ((direction == -1 && waiting_up > 0) || (direction == 1 && waiting_down == 0 && waiting_up > 0)) {
             int to_release = (waiting_up > MAX_STAIR_STEPS) ? MAX_STAIR_STEPS : waiting_up;
             waiting_up -= to_release;
             for (int i = 0; i < to_release; i++) {
-                sem_post(&up_sem);
+                sem_post(up_sem);
             }
         }
     }
