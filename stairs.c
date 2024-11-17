@@ -2,9 +2,29 @@
 
 // Helper functions
 void logger(char *source, char *message) {
-    printf("[%s] %s\n", source, message);
+    printf("<%d>[%s] %s\n", globals.time, source, message);
 }
 
+char* direction_to_string(int direction) {
+    if (direction == UP) {
+        return "UP";
+    } else if (direction == DOWN) {
+        return "DOWN";
+    } else {
+        return "IDLE";
+    }
+}
+
+void thread_sleep(int duration) {
+    int target_time = globals.time + duration;
+
+    while (globals.time < target_time) {
+        // nop
+        ;
+    }
+
+    return;
+}
 
 // You can write your own semwait function that can call sem_wait(sem) or sem_trywait(sem)
 // in addition to checking/setting proper variables
@@ -89,8 +109,16 @@ void sempost(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
 }
 
 void *threadfunction(void *vargp) {
-    // write the threadfunction whose name should be part of pthread_create(..)
-    // Don't forget your timing computations
+    thread_arg* thread = (thread_arg*) vargp;
+    thread.start_time = globals.time;
+    // customer on stairs
+    thread_sleep(globals.num_stairs)
+
+
+    pthread_mutex_lock(&mutex);
+    globals.finished_customers++;
+    pthread_mutex_unlock(&mutex);
+    thread.end_time = globals.time;
     pthread_exit(NULL);
 }
 
@@ -119,6 +147,11 @@ int main(int argc, char *argv[]) {
         threads[i].index = i;
         threads[i].direction = (rand() % 2) * 2 - 1;
         pthread_create(&tid[i], NULL, threadfunction, (void *) &threads[i]);
+    }
+
+    while ( globals.finished_customers < num_customers ) {
+        sleep(1);
+        globals.time++;
     }
 
     logger("main", "Waiting for threads to finish");

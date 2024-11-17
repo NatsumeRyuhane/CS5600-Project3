@@ -27,10 +27,6 @@ typedef struct thread_arg {
 #define MAX_THREADS_COUNT 30
 #define MAX_STAIR_STEPS 13
 
-
-// define timing variables
-int global_time = 0;
-
 // Head of thread array
 pthread_t* tid;
 
