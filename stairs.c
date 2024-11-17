@@ -1,8 +1,13 @@
 #include "stairs.h"
 
 // Helper functions
-void logger(char *source, char *message) {
-    printf("<%d>[%s] %s\n", globals.time, source, message);
+void logger(const char *source, const char *message, ...) {
+    char log[256];
+    va_list args;
+    va_start(args, message);
+    vsprintf(log, message, args);
+    va_end(args);
+    printf("<%d>[%s] %s\n", globals.time, source, log);
 }
 
 char* direction_to_string(int direction) {
@@ -13,6 +18,12 @@ char* direction_to_string(int direction) {
     } else {
         return "IDLE";
     }
+}
+
+char* get_thread_name(struct thread_arg* thread) {
+    char* name = (char*) malloc(256);
+    sprintf(name, "Customer %d", thread->index);
+    return name;
 }
 
 void thread_sleep(int duration) {
@@ -111,14 +122,21 @@ void sempost(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
 void *threadfunction(void *vargp) {
     struct thread_arg* thread = vargp;
     thread->start_time = globals.time;
+    logger(get_thread_name(thread), "arrived with direction %s", direction_to_string(thread->direction));
+
+    semwait(&up_sem, &down_sem, thread);
+
     // customer on stairs
+    logger(get_thread_name(thread), "started climbing stairs...");
     thread_sleep(globals.num_stairs);
 
+    sempost(&up_sem, &down_sem, thread);
 
     pthread_mutex_lock(&mutex);
     globals.finished_customers++;
     pthread_mutex_unlock(&mutex);
     thread->end_time = globals.time;
+    logger(get_thread_name(thread), "finished climbing stairs");
     pthread_exit(NULL);
 }
 
@@ -127,20 +145,18 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Input error: Usage: %s <num_customers> <num_stairs>\n", argv[0]);
         return 1;
     }
+    globals.num_customers = atoi(argv[1]);
+    globals.num_stairs = atoi(argv[2]);
 
-    int num_customers = atoi(argv[1]);
-    globals.num_customers = num_customers;
-    int num_stairs = atoi(argv[2]);
-    globals.num_stairs = num_stairs;
-    one_direction_quota = num_stairs;  // It should be not smaller than num_stairs
+    one_direction_quota = globals.num_stairs;  // It should be not smaller than num_stairs
 
     // Validate input
-    if (num_customers <= 0 || num_customers > MAX_THREADS_COUNT) {
+    if (globals.num_customers <= 0 || globals.num_customers > MAX_THREADS_COUNT) {
         fprintf(stderr, "Number of customers must be between 1 and %d\n", MAX_THREADS_COUNT);
         return 1;
     }
 
-    if (num_stairs <= 0 || num_stairs > MAX_STAIR_STEPS) {
+    if (globals.num_stairs <= 0 || globals.num_stairs > MAX_STAIR_STEPS) {
         fprintf(stderr, "Number of stairs must be between 1 and %d\n", MAX_STAIR_STEPS);
         return 1;
     }
@@ -148,17 +164,17 @@ int main(int argc, char *argv[]) {
     // sem_init(.....);
     sem_init(&up_sem, 0, 0);
     sem_init(&down_sem, 0, 0);
-    tid = malloc(num_customers * sizeof(pthread_t));
+    tid = malloc(globals.num_customers * sizeof(pthread_t));
 
     //printf("Number of Customers: %d\nNumber of stairs: %d\n", ...., .....);
     logger("main", "Program initialized with following parameters:");
-    printf("Number of Customers: %d\nNumber of stairs: %d\n", num_customers, num_stairs);
+    printf(".. Number of Customers: %d\n.. Number of stairs: %d\n", globals.num_customers, globals.num_stairs);
 
     // generate an array of threads, set their direction randomly, call pthread_create,
     // initializing an array of customers
     p_thread_arg_t *threads = (p_thread_arg_t *) malloc(MAX_THREADS_COUNT * sizeof(p_thread_arg_t));
     // fill the array with threads with randomized direction
-    for (int i = 0; i < num_customers; i++) {
+    for (int i = 0; i < globals.num_customers; i++) {
         threads[i].index = i;
         threads[i].direction = (rand() % 2) * 2 - 1;
         pthread_create(&tid[i], NULL, threadfunction, (void *) &threads[i]);
@@ -173,22 +189,22 @@ int main(int argc, char *argv[]) {
         globals.time++;
     }
 
-    logger("main", "Waiting for threads to finish");
+    logger("main", "All customers finished. Waiting for threads to finish");
     // for each thread created, call pthread_join(..)
-    for (int i = 0; i < num_customers; i++) {
+    for (int i = 0; i < globals.num_customers; i++) {
         pthread_join(tid[i], NULL);
     }
     logger("main", "Threads finished");
 
     // printf turnaround time for each thread and average turnaround time
     double total_time = 0;
-    for (int i = 0; i < num_customers; i++) {
+    for (int i = 0; i < globals.num_customers; i++) {
         int turnaround = (threads[i].end_time - threads[i].start_time);
-        printf("Customer %d turnaround time: %.2f seconds\n", i, turnaround);
+        printf("Customer %d turnaround time: %d units\n", i, turnaround);
         total_time += turnaround;
     }
 
-    printf("Average turnaround time: %.2f seconds\n", total_time / num_customers);    
+    printf("Average turnaround time: %.2f seconds\n", total_time / globals.num_customers);
 
 
     // free every pointer you used malloc for

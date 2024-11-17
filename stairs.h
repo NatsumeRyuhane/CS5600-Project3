@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 // This structure is used to pass arguments to the thread function
 typedef struct thread_arg {
@@ -63,4 +64,4 @@ int waiting_up;
 
 
 // write any helper functions you need here
-void logger(char* source, char* message);
+void logger(const char *source, const char *format, ...);
