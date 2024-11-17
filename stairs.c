@@ -31,9 +31,9 @@ void thread_sleep(int duration) {
 // properly use pthread_mutex_lock/unlock
 
 void semwait(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
-    
+
     int direction = thread_arg->direction;
-    
+
     if (current_direction == IDLE) {
         pthread_mutex_lock(&mutex);
         current_direction = direction;
@@ -44,7 +44,7 @@ void semwait(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
         return;
     }
     else if (current_direction == direction) {
-        if (one_direction_quota > 0 && customer_on_stairs < num_stairs) {
+        if (one_direction_quota > 0 && customer_on_stairs < globals.num_stairs) {
             pthread_mutex_lock(&mutex);
             customer_on_stairs++;
             one_direction_quota--;
@@ -66,7 +66,7 @@ void semwait(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
             sem_wait(down_sem);
         }
     }
-    
+
     pthread_mutex_lock(&mutex);
     customer_on_stairs++;
     one_direction_quota--;
@@ -79,13 +79,13 @@ void semwait(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
 // properly use pthread_mutex_lock/unlock
 void sempost(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
     pthread_mutex_lock(&mutex);
-    
+
     customer_on_stairs--;
-    
+
     if (customer_on_stairs == 0) {
         // Reset global restrictions
         current_direction = IDLE;
-        one_direction_quota = num_stairs
+        one_direction_quota = globals.num_stairs;
 
         int direction = thread_arg->direction;
 
@@ -104,40 +104,38 @@ void sempost(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
             }
         }
     }
-    
+
     pthread_mutex_unlock(&mutex);
 }
 
 void *threadfunction(void *vargp) {
-    thread_arg* thread = (thread_arg*) vargp;
-    thread.start_time = globals.time;
+    struct thread_arg* thread = vargp;
+    thread->start_time = globals.time;
     // customer on stairs
-    thread_sleep(globals.num_stairs)
+    thread_sleep(globals.num_stairs);
 
 
     pthread_mutex_lock(&mutex);
     globals.finished_customers++;
     pthread_mutex_unlock(&mutex);
-    thread.end_time = globals.time;
+    thread->end_time = globals.time;
     pthread_exit(NULL);
 }
 
 int main(int argc, char *argv[]) {
-    num_customers = atoi(argv[1]);
+    int num_customers = atoi(argv[1]);
     globals.num_customers = num_customers;
-    num_stairs = atoi(argv[2]);
+    int num_stairs = atoi(argv[2]);
     globals.num_stairs = num_stairs;
     one_direction_quota = num_stairs;  // It should be not smaller than num_stairs
 
     // sem_init(.....);
     sem_init(&up_sem, 0, 0);
-    sem_init(&down_sem, 0, 0)
+    sem_init(&down_sem, 0, 0);
     tid = malloc(num_customers * sizeof(pthread_t));
 
     //printf("Number of Customers: %d\nNumber of stairs: %d\n", ...., .....);
     logger("main", "Program initialized with following parameters:");
-    logger("main", sprintf("  Number of Customers: %d", num_customers));
-    logger("main", sprintf("  Number of stairs: %d", num_stairs));
 
     // generate an array of threads, set their direction randomly, call pthread_create,
     // initializing an array of customers
@@ -149,7 +147,11 @@ int main(int argc, char *argv[]) {
         pthread_create(&tid[i], NULL, threadfunction, (void *) &threads[i]);
     }
 
-    while ( globals.finished_customers < num_customers ) {
+    // your code here
+
+    // update the global timer and sleep for a while to let the threads finish their job checking their states
+    while (globals.finished_customers < globals.num_customers) {
+        // put main thread to sleep for 1 second so that the threads can finish their jobs updating their states
         sleep(1);
         globals.time++;
     }
@@ -161,20 +163,9 @@ int main(int argc, char *argv[]) {
     }
     logger("main", "Threads finished");
 
-    // printf turnaround time for each thread and average turnaround time
-    double total_time = 0;
-    for (int i = 0; i < num_customers; i++) {
-        int turnaround = (threads[i].end_time - threads[i].start_time)
-        printf("Customer %d turnaround time: %.2f seconds\n", i, turnaround);
-        total_time += turnaround;
-    }
-
-    printf("Average turnaround time: %.2f seconds\n", total_time / num_customers);    
-
     // free every pointer you used malloc for
     free(tid);
     free(threads);
-    sem_destroy(&sem);
 
     return 0;
 }

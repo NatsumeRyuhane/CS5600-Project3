@@ -49,23 +49,17 @@ struct GLOBALS {
     int finished_customers;
     int num_stairs;
     int num_customers;
-}
+};
 
-struct GLOBALS globals;
-globals.time = 0;
-globals.finished_customers = 0;
-globals.num_stairs = 0;
-globals.num_customers = 0;
+struct GLOBALS globals = {0, 0, 0, 0};
 
 int current_direction = IDLE;
-int num_customers
-int num_stairs
 int customer_on_stairs = 0;  // Number of customers on the stairs
 
 // Prevent starvation
 int one_direction_quota;
-int waiting_down
-int waiting_up
+int waiting_down;
+int waiting_up;
 
 
 // write any helper functions you need here
