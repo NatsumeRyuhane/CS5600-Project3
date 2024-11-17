@@ -30,6 +30,7 @@ void *threadfunction(void *vargp) {
 }
 
 int main(int argc, char *argv[]) {
+    // sem_init(.....);
     sem_init(&sem, 0, MAX_STAIR_STEPS);
     tid = malloc(MAX_THREADS_COUNT * sizeof(pthread_t));
 
@@ -38,10 +39,7 @@ int main(int argc, char *argv[]) {
     logger("main", sprintf("  Number of Customers: %d", MAX_THREADS_COUNT));
     logger("main", sprintf("  Number of stairs: %d", MAX_STAIR_STEPS));
 
-
-    // sem_init(.....);
     // generate an array of threads, set their direction randomly, call pthread_create,
-    // then sleep for some random nonzero time
     // initializing an array of customers
     p_thread_arg_t *threads = (p_thread_arg_t *) malloc(MAX_THREADS_COUNT * sizeof(p_thread_arg_t));
     // fill the array with threads with randomized direction
@@ -51,14 +49,24 @@ int main(int argc, char *argv[]) {
         pthread_create(&tid[i], NULL, threadfunction, (void *) &threads[i]);
     }
 
-    // your code here
-
+    logger("main", "Waiting for threads to finish");
     // for each thread created, call pthread_join(..)
     for (int i = 0; i < MAX_THREADS_COUNT; i++) {
         pthread_join(tid[i], NULL);
     }
+    logger("main", "Threads finished");
 
     // printf turnaround time for each thread and average turnaround time
+    double total_time = 0;
+    for (int i = 0; i < MAX_THREADS_COUNT; i++) {
+        double turnaround = 
+            (threads[i].end_time.tv_sec - threads[i].start_time.tv_sec) +
+            (threads[i].end_time.tv_usec - threads[i].start_time.tv_usec) / 1000000.0;
+        printf("Customer %d turnaround time: %.2f seconds\n", i, turnaround);
+        total_time += turnaround;
+    }
+    
+    printf("Average turnaround time: %.2f seconds\n", total_time / MAX_THREADS_COUNT);    
 
     // free every pointer you used malloc for
     free(tid);
