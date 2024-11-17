@@ -13,8 +13,8 @@
 typedef struct thread_arg {
     int index;
     int direction;
-    struct timeval start_time;
-    struct timeval end_time;
+    int start_time;
+    int end_time;
 } p_thread_arg_t;
 
 
@@ -25,15 +25,7 @@ typedef struct thread_arg {
 // you can also define other constants for your "prevent deadlock" or "prevent starvation" algorithm
 #define SYSTEM_RANDOM_SEED 0
 #define MAX_THREADS_COUNT 30
-
-// this is the maximum number of stairs that can be used at the same time,
-// as well as the maximum time a thread can spend
 #define MAX_STAIR_STEPS 13
-
-// define timing variables
-// the global time variable should be updated by the main thread
-// the thread function should read the global time variable to determine if their job is done
-int global_time = 0;
 
 // Head of thread array
 pthread_t* tid;
@@ -49,18 +41,32 @@ enum DIRECTION {
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Semaphore for stairs
-sem_t sem;
+sem_t up_sem;
+sem_t down_sem;
 
-int stair_direction = IDLE;
-int on_stair = 0;
+struct GLOBALS {
+    int time;
+    int finished_customers;
+    int num_stairs;
+    int num_customers;
+}
+
+struct GLOBALS globals;
+globals.time = 0;
+globals.finished_customers = 0;
+globals.num_stairs = 0;
+globals.num_customers = 0;
+
+int current_direction = IDLE;
+int num_customers
+int num_stairs
+int customer_on_stairs = 0;  // Number of customers on the stairs
 
 // Prevent starvation
-int waiting_up = 0;
-int waiting_down = 0;
-
-int finished_threads = 0;
+int one_direction_quota;
+int waiting_down
+int waiting_up
 
 
 // write any helper functions you need here
 void logger(char* source, char* message);
-char* direstion_to_string(int direction);

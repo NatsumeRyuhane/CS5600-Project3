@@ -2,7 +2,7 @@
 
 // Helper functions
 void logger(char *source, char *message) {
-    printf("[%s] %s\n", source, message);
+    printf("<%d>[%s] %s\n", globals.time, source, message);
 }
 
 char* direction_to_string(int direction) {
@@ -15,99 +15,161 @@ char* direction_to_string(int direction) {
     }
 }
 
+void thread_sleep(int duration) {
+    int target_time = globals.time + duration;
+
+    while (globals.time < target_time) {
+        // nop
+        ;
+    }
+
+    return;
+}
 
 // You can write your own semwait function that can call sem_wait(sem) or sem_trywait(sem)
 // in addition to checking/setting proper variables
 // properly use pthread_mutex_lock/unlock
-void semwait(sem_t *sem) {
 
+void semwait(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
+    
+    int direction = thread_arg->direction;
+    
+    if (current_direction == IDLE) {
+        pthread_mutex_lock(&mutex);
+        current_direction = direction;
+        customer_on_stairs++;
+        one_direction_quota--;
+        pthread_mutex_unlock(&mutex);
+
+        return;
+    }
+    else if (current_direction == direction) {
+        if (one_direction_quota > 0 && customer_on_stairs < num_stairs) {
+            pthread_mutex_lock(&mutex);
+            customer_on_stairs++;
+            one_direction_quota--;
+            pthread_mutex_unlock(&mutex);
+            return;
+        }
+    }
+    else {
+        // wait case, wrong direction or not space in stair or not quota
+        if (direction == UP) {
+            pthread_mutex_lock(&mutex);
+            waiting_up++;
+            pthread_mutex_unlock(&mutex);
+            sem_wait(up_sem);
+        } else {
+            pthread_mutex_lock(&mutex);
+            waiting_down++;
+            pthread_mutex_unlock(&mutex);
+            sem_wait(down_sem);
+        }
+    }
+    
+    pthread_mutex_lock(&mutex);
+    customer_on_stairs++;
+    one_direction_quota--;
+    pthread_mutex_unlock(&mutex);
 }
-
 
 
 // You can write your own sempost function that call sem_post(sem)
 // in addition to checking/setting proper variables
 // properly use pthread_mutex_lock/unlock
-void sempost(sem_t *sem) {
+void sempost(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
+    pthread_mutex_lock(&mutex);
+    
+    customer_on_stairs--;
+    
+    if (customer_on_stairs == 0) {
+        // Reset global restrictions
+        current_direction = IDLE;
+        one_direction_quota = num_stairs
 
+        int direction = thread_arg->direction;
+
+        // Choose direction with opposite direction first
+        if ((direction == 1 && waiting_down > 0) || (direction == -1 && waiting_up == 0 && waiting_down > 0)) {
+            int to_release = (waiting_down > MAX_STAIR_STEPS) ? MAX_STAIR_STEPS : waiting_down;
+            waiting_down -= to_release;
+            for (int i = 0; i < to_release; i++) {
+                sem_post(&down_sem);
+            }
+        } else if ((direction == -1 && waiting_up > 0) || (direction == 1 && waiting_down == 0 && waiting_up > 0)) {
+            int to_release = (waiting_up > MAX_STAIR_STEPS) ? MAX_STAIR_STEPS : waiting_up;
+            waiting_up -= to_release;
+            for (int i = 0; i < to_release; i++) {
+                sem_post(&up_sem);
+            }
+        }
+    }
+    
+    pthread_mutex_unlock(&mutex);
 }
 
-
 void *threadfunction(void *vargp) {
-    // write the threadfunction whose name should be part of pthread_create(..)
-    // Don't forget your timing computations
-    p_thread_arg_t* thread = (p_thread_arg_t*) vargp;
-    logger(sprintf("Thread %d", thread->index), sprintf("Costumer arrived at stairs with direction %s", direction_to_string(thread->direction)));
+    thread_arg* thread = (thread_arg*) vargp;
+    thread.start_time = globals.time;
+    // customer on stairs
+    thread_sleep(globals.num_stairs)
+
 
     pthread_mutex_lock(&mutex);
-    if (stair_direction == IDLE) {
-        stair_direction = thread->direction;
-    } else {
-        // wait until the stair is IDLE again
-    }
-
-    if (on_stair < MAX_STAIR_STEPS)
-    // check if it can start go on stairs immediately, i.e.
-    // 1. if the stair is set to the same direction or IDLE
-    // 2. if the stair still has capacity
-
-    // if the stair is at the opposite direction, wait for it to be IDLE
-
-    // if the stair is full, wait for the semaphore to be posted
+    globals.finished_customers++;
+    pthread_mutex_unlock(&mutex);
+    thread.end_time = globals.time;
     pthread_exit(NULL);
 }
 
 int main(int argc, char *argv[]) {
-    sem_init(&sem, 0, MAX_STAIR_STEPS);
-    tid = malloc(MAX_THREADS_COUNT * sizeof(pthread_t));
+    num_customers = atoi(argv[1]);
+    globals.num_customers = num_customers;
+    num_stairs = atoi(argv[2]);
+    globals.num_stairs = num_stairs;
+    one_direction_quota = num_stairs;  // It should be not smaller than num_stairs
+
+    // sem_init(.....);
+    sem_init(&up_sem, 0, 0);
+    sem_init(&down_sem, 0, 0)
+    tid = malloc(num_customers * sizeof(pthread_t));
 
     //printf("Number of Customers: %d\nNumber of stairs: %d\n", ...., .....);
     logger("main", "Program initialized with following parameters:");
-    logger("main", sprintf("  Number of Customers: %d", MAX_THREADS_COUNT));
-    logger("main", sprintf("  Number of stairs: %d", MAX_STAIR_STEPS));
+    logger("main", sprintf("  Number of Customers: %d", num_customers));
+    logger("main", sprintf("  Number of stairs: %d", num_stairs));
 
-
-    // sem_init(.....);
     // generate an array of threads, set their direction randomly, call pthread_create,
-    // then sleep for some random nonzero time
     // initializing an array of customers
     p_thread_arg_t *threads = (p_thread_arg_t *) malloc(MAX_THREADS_COUNT * sizeof(p_thread_arg_t));
     // fill the array with threads with randomized direction
-    for (int i = 0; i < MAX_THREADS_COUNT; i++) {
+    for (int i = 0; i < num_customers; i++) {
         threads[i].index = i;
         threads[i].direction = (rand() % 2) * 2 - 1;
         pthread_create(&tid[i], NULL, threadfunction, (void *) &threads[i]);
     }
 
-    // your code here
-
-    // update the global timer and sleep for a while to let the threads finish their job checking their states
-    while (finished_threads < MAX_THREADS_COUNT) {
-        global_time++;
-
-        // put main thread to sleep for 1 second so that the threads can finish their jobs updating their states
+    while ( globals.finished_customers < num_customers ) {
         sleep(1);
+        globals.time++;
     }
 
-
-    // finishing up
+    logger("main", "Waiting for threads to finish");
     // for each thread created, call pthread_join(..)
-    for (int i = 0; i < MAX_THREADS_COUNT; i++) {
+    for (int i = 0; i < num_customers; i++) {
         pthread_join(tid[i], NULL);
     }
     logger("main", "Threads finished");
 
     // printf turnaround time for each thread and average turnaround time
     double total_time = 0;
-    for (int i = 0; i < MAX_THREADS_COUNT; i++) {
-        double turnaround =
-            (threads[i].end_time.tv_sec - threads[i].start_time.tv_sec) +
-            (threads[i].end_time.tv_usec - threads[i].start_time.tv_usec) / 1000000.0;
+    for (int i = 0; i < num_customers; i++) {
+        int turnaround = (threads[i].end_time - threads[i].start_time)
         printf("Customer %d turnaround time: %.2f seconds\n", i, turnaround);
         total_time += turnaround;
     }
 
-    printf("Average turnaround time: %.2f seconds\n", total_time / MAX_THREADS_COUNT);
+    printf("Average turnaround time: %.2f seconds\n", total_time / num_customers);    
 
     // free every pointer you used malloc for
     free(tid);
