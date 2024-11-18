@@ -104,18 +104,18 @@ void sempost(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
 
         // Choose direction with opposite direction first
         if ((direction == 1 && waiting_down > 0) || (direction == -1 && waiting_up == 0 && waiting_down > 0)) {
-            logger(get_thread_name(thread_arg), "releasing down stairs at time %d", globals.time);
             current_direction = DOWN;
-            int to_release = (waiting_down > MAX_STAIR_STEPS) ? MAX_STAIR_STEPS : waiting_down;
+            int to_release = (waiting_down > globals.num_stairs) ? globals.num_stairs : waiting_down;
             waiting_down -= to_release;
+            logger(get_thread_name(thread_arg), "releasing %d down stairs at time %d", to_release, globals.time);
             for (int i = 0; i < to_release; i++) {
                 sem_post(down_sem);
             }
         } else if ((direction == -1 && waiting_up > 0) || (direction == 1 && waiting_down == 0 && waiting_up > 0)) {
-            logger(get_thread_name(thread_arg), "releasing up stairs at time %d", globals.time);
             current_direction = UP;
-            int to_release = (waiting_up > MAX_STAIR_STEPS) ? MAX_STAIR_STEPS : waiting_up;
+            int to_release = (waiting_up > globals.num_stairs) ? globals.num_stairs : waiting_up;
             waiting_up -= to_release;
+            logger(get_thread_name(thread_arg), "releasing %d up stairs at time %d", to_release, globals.time);
             for (int i = 0; i < to_release; i++) {
                 sem_post(up_sem);
             }
@@ -178,7 +178,7 @@ int main(int argc, char *argv[]) {
 
     // generate an array of threads, set their direction randomly, call pthread_create,
     // initializing an array of customers
-    p_thread_arg_t *threads = (p_thread_arg_t *) malloc(MAX_THREADS_COUNT * sizeof(p_thread_arg_t));
+    p_thread_arg_t *threads = (p_thread_arg_t *) malloc(globals.num_customers * sizeof(p_thread_arg_t));
     // fill the array with threads with randomized direction
     for (int i = 0; i < globals.num_customers; i++) {
         threads[i].index = i;
