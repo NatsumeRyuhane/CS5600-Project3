@@ -147,6 +147,8 @@ void *threadfunction(void *vargp) {
 }
 
 int main(int argc, char *argv[]) {
+    srand(SYSTEM_RANDOM_SEED);
+
     if (argc != 3) {
         fprintf(stderr, "Input error: Usage: %s <num_customers> <num_stairs>\n", argv[0]);
         return 1;
@@ -174,7 +176,7 @@ int main(int argc, char *argv[]) {
 
     //printf("Number of Customers: %d\nNumber of stairs: %d\n", ...., .....);
     logger("main", "Program initialized with following parameters:");
-    printf(".. Number of Customers: %d\n.. Number of stairs: %d\n", globals.num_customers, globals.num_stairs);
+    printf(".. Number of Customers: %d\n.. Number of stairs   : %d\n", globals.num_customers, globals.num_stairs);
 
     // generate an array of threads, set their direction randomly, call pthread_create,
     // initializing an array of customers
@@ -191,7 +193,7 @@ int main(int argc, char *argv[]) {
     // update the global timer and sleep for a while to let the threads finish their job checking their states
     while (globals.finished_customers < globals.num_customers) {
         // put main thread to sleep for 1 second so that the threads can finish their jobs updating their states
-        sleep(1);
+        usleep(100 * 1000);
         globals.time++;
     }
 
@@ -206,7 +208,7 @@ int main(int argc, char *argv[]) {
     double total_time = 0;
     for (int i = 0; i < globals.num_customers; i++) {
         int turnaround = (threads[i].end_time - threads[i].start_time);
-        printf("Customer %d turnaround time: %d units\n", i, turnaround);
+        printf("Customer %d [%s] turnaround time: %d units\n", i, direction_to_string(threads[i].direction), turnaround);
         total_time += turnaround;
     }
 
