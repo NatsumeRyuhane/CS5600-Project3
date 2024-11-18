@@ -55,18 +55,16 @@ void semwait(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
 
         return;
     }
-    else if (current_direction == direction) {
-        if (one_direction_quota > 0 && customer_on_stairs < globals.num_stairs) {
-            pthread_mutex_lock(&mutex);
-            logger(get_thread_name(thread_arg), "stair still have capacity and directional quota, climbing stairs");
-            customer_on_stairs++;
-            one_direction_quota--;
-            pthread_mutex_unlock(&mutex);
-            return;
-        }
+    else if (current_direction == direction && one_direction_quota > 0 && customer_on_stairs < globals.num_stairs) {
+        pthread_mutex_lock(&mutex);
+        logger(get_thread_name(thread_arg), "stair still have capacity and directional quota, climbing stairs");
+        customer_on_stairs++;
+        one_direction_quota--;
+        pthread_mutex_unlock(&mutex);
+        return;
     }
     else {
-        logger(get_thread_name(thread_arg), "stair being occupied by other direction (this: %s, stair: %s)", direction_to_string(direction), direction_to_string(current_direction));
+        logger(get_thread_name(thread_arg), "stair being occupied by other direction or it is full (this: %s, stair: %s)", direction_to_string(direction), direction_to_string(current_direction));
         // wait case, wrong direction or not space in stair or not quota
         if (direction == UP) {
             pthread_mutex_lock(&mutex);
@@ -126,12 +124,12 @@ void sempost(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
 void *threadfunction(void *vargp) {
     struct thread_arg* thread = vargp;
     thread->start_time = globals.time;
-    logger(get_thread_name(thread), "arrived with direction %s", direction_to_string(thread->direction));
+    logger(get_thread_name(thread), "arrived with direction %s at time %d", direction_to_string(thread->direction), thread->start_time);
 
     semwait(&up_sem, &down_sem, thread);
 
     // customer on stairs
-    logger(get_thread_name(thread), "started climbing stairs...");
+    logger(get_thread_name(thread), "started climbing stairs at time %d", globals.time);
     thread_sleep(globals.num_stairs);
 
     sempost(&up_sem, &down_sem, thread);
@@ -140,7 +138,7 @@ void *threadfunction(void *vargp) {
     globals.finished_customers++;
     pthread_mutex_unlock(&mutex);
     thread->end_time = globals.time;
-    logger(get_thread_name(thread), "finished climbing stairs");
+    logger(get_thread_name(thread), "finished climbing stairs at time %d", thread->end_time);
     pthread_exit(NULL);
 }
 
