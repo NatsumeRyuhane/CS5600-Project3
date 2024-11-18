@@ -47,6 +47,7 @@ void semwait(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
 
     if (current_direction == IDLE) {
         pthread_mutex_lock(&mutex);
+        logger(get_thread_name(thread_arg), "stair direction is IDLE, setting direction to %s", direction_to_string(direction));
         current_direction = direction;
         customer_on_stairs++;
         one_direction_quota--;
@@ -57,6 +58,7 @@ void semwait(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
     else if (current_direction == direction) {
         if (one_direction_quota > 0 && customer_on_stairs < globals.num_stairs) {
             pthread_mutex_lock(&mutex);
+            logger(get_thread_name(thread_arg), "stair still have capacity and directional quota, climbing stairs");
             customer_on_stairs++;
             one_direction_quota--;
             pthread_mutex_unlock(&mutex);
@@ -64,6 +66,7 @@ void semwait(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
         }
     }
     else {
+        logger(get_thread_name(thread_arg), "stair being occupied by other direction (this: %s, stair: %s)", direction_to_string(direction), direction_to_string(current_direction));
         // wait case, wrong direction or not space in stair or not quota
         if (direction == UP) {
             pthread_mutex_lock(&mutex);
@@ -78,6 +81,7 @@ void semwait(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
         }
     }
 
+    logger(get_thread_name(thread_arg), "stair is now available, climbing stairs");
     pthread_mutex_lock(&mutex);
     customer_on_stairs++;
     one_direction_quota--;
