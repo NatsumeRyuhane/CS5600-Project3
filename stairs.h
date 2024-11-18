@@ -24,7 +24,7 @@ typedef struct thread_arg {
 // #define the maximum number of customers/threads in the system to test
 // #define how many customer can be on the stairs at the same time
 // you can also define other constants for your "prevent deadlock" or "prevent starvation" algorithm
-#define SYSTEM_RANDOM_SEED 0
+#define SYSTEM_RANDOM_SEED 123
 #define MAX_THREADS_COUNT 30
 #define MAX_STAIR_STEPS 13
 
