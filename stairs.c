@@ -60,6 +60,7 @@ void semwait(p_thread_arg_t* thread_arg) {
         logger(get_thread_name(thread_arg), "stair is IDLE, setting direction to %s and refreshing quota",
                direction_to_string(thread_direction));
         stair.current_direction = thread_direction;
+        stair.directional_quota = globals.num_steps;
         stair.customer_on_stairs++;
         stair.directional_quota--;
         pthread_mutex_unlock(&mutex);
@@ -128,7 +129,7 @@ void sempost(p_thread_arg_t* thread_arg) {
         if ((thread_direction == UP && stair.waiting_down > 0) ||
             (thread_direction == DOWN && stair.waiting_up == 0 && stair.waiting_down > 0)) {
             stair.current_direction = DOWN;
-            logger(get_thread_name(thread_arg), "prioritizing traffic in opposite direction, setting direction of stairs to [DOWN]");
+            logger(get_thread_name(thread_arg), "setting direction of stairs to [DOWN]");
             int to_release = (stair.waiting_down > globals.num_steps) ? globals.num_steps : stair.waiting_down;
             stair.waiting_down -= to_release;
             logger(get_thread_name(thread_arg), "released %d capacity for [DOWN]", to_release);
@@ -138,7 +139,7 @@ void sempost(p_thread_arg_t* thread_arg) {
         } else if ((thread_direction == DOWN && stair.waiting_up > 0) ||
                    (thread_direction == UP && stair.waiting_down == 0 && stair.waiting_up > 0)) {
             stair.current_direction = UP;
-            logger(get_thread_name(thread_arg), "prioritizing traffic in opposite direction, setting direction of stairs to [ UP ]");
+            logger(get_thread_name(thread_arg), "setting direction of stairs to [ UP ]");
             int to_release = (stair.waiting_up > globals.num_steps) ? globals.num_steps : stair.waiting_up;
             stair.waiting_up -= to_release;
             logger(get_thread_name(thread_arg), "released %d capacity for [ UP ]", to_release);
