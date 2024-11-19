@@ -12,27 +12,22 @@
 
 // This structure is used to pass arguments to the thread function
 typedef struct thread_arg {
-    int index;
-    int direction;
-    int start_time;
-    int end_time;
+    int index;        // Index of the customer thread
+    int direction;    // Direction of the customer thread
+    int start_time;   // Arrival/Start time of the customer thread
+    int end_time;     // Finish time of the customer thread
 } p_thread_arg_t;
 
 
 // global constants
-// define any global constants you want to use in your code
-// #define the maximum number of customers/threads in the system to test
-// #define how many customer can be on the stairs at the same time
-// you can also define other constants for your "prevent deadlock" or "prevent starvation" algorithm
-#define SYSTEM_RANDOM_SEED 123
-#define MAX_THREADS_COUNT 30
-#define MAX_STAIR_STEPS 13
+#define SYSTEM_RANDOM_SEED 0        // Random seed for the system
+#define MAX_CUSTOMERS_COUNT 30      // Maximum number of customers
+#define MAX_STAIR_STEPS 13          // Maximum number of steps of the stair
+#define MAX_ARRIVAL_TIME 30         // Latest arrival time of a customer
+#define TIMESLICE_MS 100            // Simulation time slice in milliseconds
 
 // Mutex for preventing race condition
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
-// Head of thread array
-pthread_t* tid;
 
 // Define global variables on the allowed direction, waiting threads, ...
 enum DIRECTION {
@@ -49,26 +44,44 @@ struct SEMAPHORES {
 
 struct SEMAPHORES semaphores;
 
-sem_t up_sem;
-sem_t down_sem;
-
 struct GLOBALS {
-    int time;
-    int finished_customers;
-    int num_stairs;
-    int num_customers;
+    int time;                       // Global time
+    pthread_t* threads;             // Array of threads
+    p_thread_arg_t* thread_args;    // Array of thread arguments
+    int num_steps;                  // Number of steps of the stair
+    int num_customers;              // Number of customers
+    int finished_customers;         // Number of finished customers
 };
 
-struct GLOBALS globals = {0, 0, 0, 0};
+struct GLOBALS globals = {
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+};
 
-int current_direction = IDLE;
-int customer_on_stairs = 0;  // Number of customers on the stairs
+struct STAIR {
+    int current_direction;
+    int customer_on_stairs;
+    int directional_quota;
+    int waiting_down;
+    int waiting_up;
+};
 
-// Prevent starvation
-int one_direction_quota;
-int waiting_down;
-int waiting_up;
+struct STAIR stair = {
+        IDLE,
+        0,
+        0,
+        0,
+        0
+};
 
 
 // write any helper functions you need here
-void logger(const char *source, const char *format, ...);
+void logger(const char* source, const char* format, ...);
+char* direction_to_string(int direction);
+char* get_thread_name(struct thread_arg* thread);
+void thread_sleep(int duration);
+int compare(const void* a, const void* b);
