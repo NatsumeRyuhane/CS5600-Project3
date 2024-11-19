@@ -64,6 +64,8 @@ void semwait(p_thread_arg_t* thread_arg) {
     }
 
     if (stair.current_direction == IDLE) {
+        // This is the first customer of this direction, set the direction. 
+        // We need to make sure it will start climbing immediately
         logger(get_thread_name(thread_arg), "stair is IDLE, setting direction to %s and refreshing quota",
                direction_to_string(thread_direction));
         stair.current_direction = thread_direction;
@@ -73,8 +75,13 @@ void semwait(p_thread_arg_t* thread_arg) {
 
         return;
     } else if (stair.current_direction == thread_direction && stair.directional_quota > 0 &&
-               stair.customer_on_stairs < globals.num_steps) {
+               stair.customer_on_stairs < globals.num_steps && waiting == 0) {
+        // There is still capacity and directional quota and no one is waiting, put self on stairs
         logger(get_thread_name(thread_arg), "stair still have capacity and directional quota, put self in waiting queue");
+        stair.customer_on_stairs++;
+        stair.directional_quota--;
+        pthread_mutex_unlock(&mutex);
+        return;
     } else {
         if (stair.current_direction != thread_direction) {
             logger(get_thread_name(thread_arg),
@@ -90,6 +97,7 @@ void semwait(p_thread_arg_t* thread_arg) {
     }
 
     // wait case, wrong thread_direction or not space in stair or not quota
+
     if (thread_direction == UP) {
         stair.waiting_up++;
         pthread_mutex_unlock(&mutex);
@@ -99,9 +107,14 @@ void semwait(p_thread_arg_t* thread_arg) {
         pthread_mutex_unlock(&mutex);
         sem_wait(semaphores.down);
     }
+    pthread_mutex_lock(&mutex);
+    if (thread_direction == UP) {
+        stair.waiting_up--;
+    } else {
+        stair.waiting_down--;
+    }
 
     logger(get_thread_name(thread_arg), "stair is now available, climbing stairs");
-    pthread_mutex_lock(&mutex);
     stair.customer_on_stairs++;
     stair.directional_quota--;
     pthread_mutex_unlock(&mutex);
@@ -114,15 +127,33 @@ void semwait(p_thread_arg_t* thread_arg) {
 void sempost(p_thread_arg_t* thread_arg) {
     pthread_mutex_lock(&mutex);
 
+    int thread_direction = thread_arg->direction;
+    int waiting;
+    if (thread_direction == UP) {
+        waiting = stair.waiting_up;
+    } else {
+        waiting = stair.waiting_down;
+    }
+
     stair.customer_on_stairs--;
 
+    // If there is quota and there is a customer waiting in the same direction, 
+    // We need to post the semaphore after each customer leaves
+    if (stair.directional_quota > 0 && waiting > 0) {
+        if (thread_direction == UP) {
+            sem_post(semaphores.up);
+        } else {
+            sem_post(semaphores.down);
+        }
+    }
+
+    // Here is the tricky part. In theory, we could reset the direction when the last customer leaves.
+    // Because there should be no one in the waiting queue who is already waked up.
     if (stair.customer_on_stairs == 0) {
         // Reset global restrictions
         logger(get_thread_name(thread_arg), "stair is now empty, resetting global restrictions");
         stair.current_direction = IDLE;
         stair.directional_quota = globals.quota;
-
-        int thread_direction = thread_arg->direction;
 
         // Choose direction with opposite direction_this first
         // Only when the waiting queue consists of the same direction, we keep the same direction
@@ -131,9 +162,7 @@ void sempost(p_thread_arg_t* thread_arg) {
 
             stair.current_direction = DOWN;
             logger(get_thread_name(thread_arg), "setting direction of stairs to [DOWN]");
-
             int to_release = (stair.waiting_down > globals.num_steps) ? globals.num_steps : stair.waiting_down;
-            stair.waiting_down -= to_release;
             logger(get_thread_name(thread_arg), "releasing %d capacity for [DOWN]", to_release);
             for (int i = 0; i < to_release; i++) {
                 sem_post(semaphores.down);
@@ -143,9 +172,7 @@ void sempost(p_thread_arg_t* thread_arg) {
 
             stair.current_direction = UP;
             logger(get_thread_name(thread_arg), "setting direction of stairs to [ UP ]");
-
             int to_release = (stair.waiting_up > globals.num_steps) ? globals.num_steps : stair.waiting_up;
-            stair.waiting_up -= to_release;
             logger(get_thread_name(thread_arg), "releasing %d capacity for [ UP ]", to_release);
             for (int i = 0; i < to_release; i++) {
                 sem_post(semaphores.up);
