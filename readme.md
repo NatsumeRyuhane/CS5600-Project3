@@ -12,6 +12,21 @@ This project simulates a scenario where customers arrive at a building and use t
 
 This project only consist of two code files: `stairs.c` and `stairs.h`. The header files contains the library imports, function prototypes, and a few structs for managing global variables. The `stairs.c` contains the implementation of declared functions and `main()`.
 
+1. **Global State Management**
+   - Global variables and structures are defined in `stairs.h` to manage the state of the stairs and customers
+   - The `GLOBALS` structure maintains program-wide state including time, threads, and customer counts
+   - The `STAIR` structure tracks the current state of the staircase
+
+2. **Synchronization Mechanisms**
+   - Semaphores (`up_sem` and `down_sem`) control access to the stairs
+   - A mutex lock protects critical sections when updating shared state
+   - Direction-based quotas prevent starvation
+
+3. **Thread Management**
+   - Each customer is represented by a separate thread
+   - Threads are created dynamically as customers arrive
+   - The main thread acts as a timer and status monitor
+
 To compile, run
 
 ```bash
@@ -32,22 +47,22 @@ For clearer demonstration, the timing used in this project is not the actual run
 
 This project is implemented under following assumptions:
 
-* Every customer takes 1 step per time unit. For one customer, it would take the customer `n` time units to traverse the stair with `n` steps.
-* The capacity of the stairs is equal to the number of steps. Customers may overlap on the same step as long as the total number of customers on the stairs does not exceed the capacity.
-* Customers arrive at as early as time unit 1. T = 0 is reserved for initialization.
+- Every customer takes 1 step per time unit. For one customer, it would take the customer `n` time units to traverse the stair with `n` steps.
+- The capacity of the stairs is equal to the number of steps. Customers may overlap on the same step as long as the total number of customers on the stairs does not exceed the capacity.
+- Customers arrive at as early as time unit 1. T = 0 is reserved for initialization.
 
 ### Thread Lifecycle
 
 1. Initilization
-   
+  
    When `globals.time == thread_args.start_time`, main thread will call `pthread_create` to create a new thread for the customer.
 
 2. Arrival
 
    After the thread is initialized, it calls `semwait()` to start checking for semaphores.
-   
+  
    The thread will first check if the stair is `IDLE`. If so, it will set the direction of the stair and reset the qoutas, and directly start climbing the stairs.
-   
+  
    If not, it will print a log message and explain why it may put itself into waiting queue. When inside waiting queue, it will increment the global variable `stairs.waiting_up` or `stairs.waiting_down`, and will need to wait on corresponding semaphore to proceed.
 
    After succefully acquired the semaphore, the waiting thread will start climbing the stair.
@@ -58,12 +73,12 @@ This project is implemented under following assumptions:
 
 4. After Climbing
 
-   After `climb()` exits the thread will call `semposy()` to finish up the variable updates. 
+   After `climb()` exits the thread will call `semposy()` to finish up the variable updates.
 
    If itself is the last customer on the stair, it will reset the stair to `IDLE` and check if the waiting queues:
 
-   If there are customers waiting in the opposite direction, it will set the direction of the stair to the opposite direction and release the corresponding semaphore. 
-   
+   If there are customers waiting in the opposite direction, it will set the direction of the stair to the opposite direction and release the corresponding semaphore.
+  
    If there are only customers waiting in the same direction, it will release the semaphore for the same direction instead.
 
 5. Finish
@@ -81,6 +96,7 @@ The main thread is responsible for ticking the global timer and spawn threads wh
 > This test case demonstrates the basic functionality of the program. It succsfully demonstrated 3 customers waiting in turns to avoid conflict.
 
 Input:
+
 ```C
 globals.num_steps = 1;
 add_customer(1, UP);
@@ -89,7 +105,8 @@ add_customer(1, DOWN);
 ```
 
 Output:
-```
+
+```txt
   0 [main] Program initialized with following parameters:
 ... Number of Customers: 3
 ... Steps of Stair     : 1
@@ -138,6 +155,7 @@ Average turnaround time: 2.00 units
 > This test case demonstrates the program's ability to handle a group of customers arriving at the same time with same direction. It successfully scheduled all customers with full utilization of the stair.
 
 Input:
+
 ```C
 globals.num_steps = 3;
 add_customer(1, UP);
@@ -167,7 +185,8 @@ add_customer(30, DOWN);
 ```
 
 Output:
-```
+
+```txt
   0 [main] Program initialized with following parameters:
 ... Number of Customers: 24
 ... Steps of Stair     : 3
@@ -408,7 +427,8 @@ add_customer(3, UP);
 ```
 
 Output:
-```
+
+```txt
   0 [main] Program initialized with following parameters:
 ... Number of Customers: 8
 ... Steps of Stair     : 3
@@ -493,14 +513,48 @@ Average turnaround time: 5.00 units
 
 ### Validation
 
-The validity of the program can be done by inspecting the stair status update at the end of each time unit.
+1. **Input Validation**
+   - Number of customers must be between 1 and MAX_CUSTOMERS_COUNT
+   - Number of stairs must be between 1 and MAX_STAIR_STEPS
+   - Customer arrival times must be ≥ 1 (T=0 reserved for initialization)
 
-The main function will report the status of the stair at the end of a time unit and it is easy to validate if the constraint is violated by inspecting the logs.
+2. **State Validation**
+   - Ensures stair capacity never exceeds the number of steps
+   - The validity of the program can be done by inspecting the stair status update at the end of each time unit.
+   The main function will report the status of the stair at the end of a time unit and it is easy to validate if the constraint is violated by inspecting the logs.
+   - Maintains consistent direction state (UP/DOWN/IDLE)
+   - Tracks waiting customers to prevent loss of requests
+
+3. **Resource Management**
+   - Proper initialization and cleanup of semaphores
+   - Memory management for dynamically allocated thread resources
+   - Mutex lock/unlock pairs for thread synchronization
 
 ### Performance
 
 **Average Turnaround Time**
 
+- Basic Case: 2.00 units (3 customers)
+- Bulk Efficiency: 4.75 units (24 customers)
+- Starvation Test: 5.00 units (8 customers)
 On a 10 customer with 3 steps stair scenario, the average turnaround time is about 4.7 units.
 
 ## Contributions
+
+Jiaxing Tan:
+
+- Implemented the sempost function
+- Implemented the semwait function
+- Implemented the part of main function
+- Debugged the code
+- Create test input for different cases
+
+Yulong Cao:
+
+- Implement the threadfunction
+- Implemented the logger function
+- Implemented the climb function
+- Implemented the part of main function
+- Refactored the code
+- Debugged the code
+- Implemented the add_customer function and test script
