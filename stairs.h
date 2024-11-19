@@ -52,9 +52,11 @@ struct GLOBALS {
     int num_steps;                  // Number of steps of the stair
     int num_customers;              // Number of customers
     int finished_customers;         // Number of finished customers
+    int quota;                      // Quota of the stair
 };
 
 struct GLOBALS globals = {
+        0,
         0,
         0,
         0,

@@ -54,6 +54,7 @@ int compare( const void* a, const void* b)
 void semwait(p_thread_arg_t* thread_arg) {
 
     int thread_direction = thread_arg->direction;
+    pthread_mutex_lock(&mutex);
 
     int waiting;
     if (thread_direction == UP) {
@@ -62,12 +63,10 @@ void semwait(p_thread_arg_t* thread_arg) {
         waiting = stair.waiting_down;
     }
 
-    pthread_mutex_lock(&mutex);
     if (stair.current_direction == IDLE) {
         logger(get_thread_name(thread_arg), "stair is IDLE, setting direction to %s and refreshing quota",
                direction_to_string(thread_direction));
         stair.current_direction = thread_direction;
-        stair.directional_quota = globals.num_steps;
         stair.customer_on_stairs++;
         stair.directional_quota--;
         pthread_mutex_unlock(&mutex);
@@ -121,7 +120,7 @@ void sempost(p_thread_arg_t* thread_arg) {
         // Reset global restrictions
         logger(get_thread_name(thread_arg), "stair is now empty, resetting global restrictions");
         stair.current_direction = IDLE;
-        stair.directional_quota = globals.num_steps;
+        stair.directional_quota = globals.quota;
 
         int thread_direction = thread_arg->direction;
 
@@ -186,8 +185,9 @@ int main(int argc, char* argv[]) {
     }
     globals.num_customers = atoi(argv[1]);
     globals.num_steps = atoi(argv[2]);
+    globals.quota = globals.num_steps * stair.quota_factor;
 
-    stair.directional_quota = globals.num_steps * stair.quota_factor;  // It should be not smaller than num_steps
+    stair.directional_quota = globals.quota;  // It should be not smaller than num_steps
 
     // Validate input
     if (globals.num_customers <= 0 || globals.num_customers > MAX_CUSTOMERS_COUNT) {
