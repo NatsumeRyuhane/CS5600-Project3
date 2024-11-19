@@ -14,6 +14,7 @@ This project is implemented under following assumptions:
 
 * Every customer takes 1 step per time unit. For one customer, it would take the customer `n` time units to traverse the stair with `n` steps.
 * The capacity of the stairs is equal to the number of steps. Customers may overlap on the same step as long as the total number of customers on the stairs does not exceed the capacity.
+* Customers arrive at as early as time unit 1. T = 0 is reserved for initialization.
 
 1. **Customer Arrival**
 
