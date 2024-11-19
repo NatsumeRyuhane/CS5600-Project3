@@ -216,7 +216,7 @@ int main(int argc, char* argv[]) {
 
     //printf("Number of Customers: %d\nNumber of stairs: %d\n", ...., .....);
     logger("main", "Program initialized with following parameters:");
-    printf("... Number of Customers: %d\n... Steps of Stair     : %d\n", globals.num_customers, globals.num_steps);
+    printf("... Number of Customers: %d\n... Steps of Stair: %d\n", globals.num_customers, globals.num_steps);
 
     int arrival_times[globals.num_customers];
     for (int i = 0; i < globals.num_customers; i++) {

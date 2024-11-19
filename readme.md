@@ -2,9 +2,11 @@
 
 ## Author Information
 
-Group #{id}: Jiaxing Tan, Yulong Cao
+Group 3: Jiaxing Tan, Yulong Cao
 
 ## Project Description
+
+This project simulates a scenario where customers arrive at a building and use the stairs to go up or down. The stairs have a limited capacity, and customers must wait for their turn to use the stairs.
 
 ## Implementation Details
 

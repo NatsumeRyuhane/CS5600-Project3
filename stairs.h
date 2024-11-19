@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <signal.h>
@@ -23,8 +24,8 @@ typedef struct thread_arg {
 #define SYSTEM_RANDOM_SEED 0        // Random seed for the system
 #define MAX_CUSTOMERS_COUNT 30      // Maximum number of customers
 #define MAX_STAIR_STEPS 13          // Maximum number of steps of the stair
-#define MAX_ARRIVAL_TIME 30         // Latest arrival time of a customer
-#define TIMESLICE_MS 100            // Simulation time slice in milliseconds
+#define MAX_ARRIVAL_TIME 4         // Latest arrival time of a customer
+#define TIMESLICE_MS 100            // Simulation time slice in microseconds
 
 // Mutex for preventing race condition
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
