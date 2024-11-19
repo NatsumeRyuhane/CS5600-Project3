@@ -187,7 +187,7 @@ int main(int argc, char* argv[]) {
     globals.num_customers = atoi(argv[1]);
     globals.num_steps = atoi(argv[2]);
 
-    stair.directional_quota = globals.num_steps;  // It should be not smaller than num_steps
+    stair.directional_quota = globals.num_steps * stair.quota_factor;  // It should be not smaller than num_steps
 
     // Validate input
     if (globals.num_customers <= 0 || globals.num_customers > MAX_CUSTOMERS_COUNT) {

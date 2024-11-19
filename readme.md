@@ -61,7 +61,7 @@ This project is implemented under following assumptions:
 
    After the thread is initialized, it calls `semwait()` to start checking for semaphores.
   
-   The thread will first check if the stair is `IDLE`. If so, it will set the direction of the stair and reset the qoutas, and directly start climbing the stairs.
+   The thread will first check if the stair is `IDLE`. If so, it will set the direction of the stair and directly start climbing the stairs without waiting.
   
    If not, it will print a log message and explain why it may put itself into waiting queue. When inside waiting queue, it will increment the global variable `stairs.waiting_up` or `stairs.waiting_down`, and will need to wait on corresponding semaphore to proceed.
 
@@ -73,7 +73,7 @@ This project is implemented under following assumptions:
 
 4. After Climbing
 
-   After `climb()` exits the thread will call `semposy()` to finish up the variable updates.
+   After `climb()` exits the thread will call `sempost()` to finish up the variable updates.
 
    If itself is the last customer on the stair, it will reset the stair to `IDLE` and check if the waiting queues:
 
@@ -88,6 +88,52 @@ This project is implemented under following assumptions:
 ### `main` thread
 
 The main thread is responsible for ticking the global timer and spawn threads when a customer should arrive. It also collects statistics about the stair and the final report generation.
+
+### Core Functions
+
+1. **`semwait(p_thread_arg_t* thread_arg)`**
+   - Purpose: Controls access to the stairs for incoming customers
+   - Handles direction conflicts and capacity management
+   - Implements waiting queue logic using semaphores
+
+2. **`sempost(p_thread_arg_t* thread_arg)`**
+   - Purpose: Manages customer exit from stairs and resource release
+   - Resets global restrictions when stairs become empty
+   - Handles direction switching and quota management
+
+3. **`threadfunction(void* vargp)`**
+   - Purpose: Main thread routine for each customer
+   - Manages customer lifecycle from arrival to departure
+   - Coordinates stair climbing and resource management
+
+### Helper Functions
+
+1. **`logger(const char* source, const char* message, ...)`**
+   - Purpose: Provides formatted logging functionality
+   - Timestamps messages with global time
+   - Identifies message source (customer or main thread)
+
+2. **`direction_to_string(int direction)`**
+   - Purpose: Converts direction enum to readable string
+   - Used for logging and status display
+
+3. **`climb(int duration)`**
+   - Purpose: Simulates the climbing action
+   - Implements time-based progression
+
+4. **`get_thread_name(struct thread_arg* thread)`**
+   - Purpose: Generates readable thread identifier
+   - Used for logging and debugging
+
+### Test Support Functions
+
+1. **`add_customer(int arrival_time, int direction)`**
+   - Purpose: Adds new customer to the simulation
+   - Used in test cases to set up scenarios
+
+2. **`compare(const void* a, const void* b)`**
+   - Purpose: Comparison function for sorting arrival times
+   - Used to order customer arrivals
 
 ### Testing
 

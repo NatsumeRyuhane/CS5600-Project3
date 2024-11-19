@@ -69,6 +69,7 @@ struct STAIR {
     int directional_quota;
     int waiting_down;
     int waiting_up;
+    int quota_factor;
 };
 
 struct STAIR stair = {
@@ -76,7 +77,8 @@ struct STAIR stair = {
         0,
         0,
         0,
-        0
+        0,
+        2
 };
 
 
