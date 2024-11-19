@@ -244,9 +244,12 @@ int main(int argc, char* argv[]) {
             }
         }
         usleep(TIMESLICE_MS * 1000);
+
+        pthread_mutex_lock(&mutex);
         logger("main", "Stair status: [Direction: %s, Capacity: %d/%d, Quota: %d, Waiting UP: %d, Waiting DOWN: %d]",
                direction_to_string(stair.current_direction), stair.customer_on_stairs, globals.num_steps, stair.directional_quota, stair.waiting_up, stair.waiting_down);
         globals.time++;
+        pthread_mutex_unlock(&mutex);
     }
 
     logger("main", "All customers finished. Calling join for each thread...");
