@@ -8,6 +8,24 @@ Group 3: Jiaxing Tan, Yulong Cao
 
 This project simulates a scenario where customers arrive at a building and use the stairs to go up or down. The stairs have a limited capacity, and customers must wait for their turn to use the stairs.
 
+### Program Structure
+
+This project only consist of two code files: `stairs.c` and `stairs.h`. The header files contains the library imports, function prototypes, and a few structs for managing global variables. The `stairs.c` contains the implementation of declared functions and `main()`.
+
+To compile, run
+
+```bash
+make stairs
+````
+
+It will compile the program as `stairs` and automatically run with parameter `10 3`.
+
+To run the executable with custom parameters, run
+
+```bash
+./stairs <num_customers> <num_stairs>
+```
+
 ## Implementation Details
 
 For clearer demonstration, the timing used in this project is not the actual run time. The `main` thread will periodically update a global timer to simulate the time passing. By default, one time unit is to 100ms.
@@ -18,28 +36,49 @@ This project is implemented under following assumptions:
 * The capacity of the stairs is equal to the number of steps. Customers may overlap on the same step as long as the total number of customers on the stairs does not exceed the capacity.
 * Customers arrive at as early as time unit 1. T = 0 is reserved for initialization.
 
-1. **Customer Arrival**
+### Thread Lifecycle
 
-   A customer arrives and checks the current_direction:
+1. Initilization
+   
+   When `globals.time == thread_args.start_time`, main thread will call `pthread_create` to create a new thread for the customer.
 
-   * If the stairs are idle, they set current_direction to their direction, enter the stairs, and increment the relevant count (upstairs_count or downstairs_count).
-   * If the stairs are already being used in the same direction, they join the current group on the stairs.
-   * If the stairs are in use by customers going in the opposite direction, they wait on the semaphore for their direction.
+2. Arrival
 
-2. **Customer Leaves**
+   After the thread is initialized, it calls `semwait()` to start checking for semaphores.
+   
+   The thread will first check if the stair is `IDLE`. If so, it will set the direction of the stair and reset the qoutas, and directly start climbing the stairs.
+   
+   If not, it will print a log message and explain why it may put itself into waiting queue. When inside waiting queue, it will increment the global variable `stairs.waiting_up` or `stairs.waiting_down`, and will need to wait on corresponding semaphore to proceed.
 
-   * When a customer leaves, they decrement the count for their direction.
-   * If the count for their direction reaches zero (i.e., no one else is going in that direction), they set current_direction to 0 (idle) and release the semaphore for customers waiting in the opposite direction.
+   After succefully acquired the semaphore, the waiting thread will start climbing the stair.
 
-3. **Switching Directions**
+3. Climbing
 
-   The opposite-direction customers who were waiting are now allowed to use the stairs, and the process repeats.
+   The climbing is simulated by `climb()` function which loops contiously checking if the `global.time` reached the target time for finish climbing. This function exits when the time is reached.
 
-### Program Structure
+4. After Climbing
+
+   After `climb()` exits the thread will call `semposy()` to finish up the variable updates. 
+
+   If itself is the last customer on the stair, it will reset the stair to `IDLE` and check if the waiting queues:
+
+   If there are customers waiting in the opposite direction, it will set the direction of the stair to the opposite direction and release the corresponding semaphore. 
+   
+   If there are only customers waiting in the same direction, it will release the semaphore for the same direction instead.
+
+5. Finish
+
+   The thread calls `pthread_exit()` to exit.
+
+### `main` thread
+
+The main thread is responsible for ticking the global timer and spawn threads when a customer should arrive. It also collects statistics about the stair and the final report generation.
 
 ### Testing
 
 **Case 1: Basic Case**
+
+> This test case demonstrates the basic functionality of the program. It succsfully demonstrated 3 customers waiting in turns to avoid conflict.
 
 Input:
 ```C
@@ -95,6 +134,8 @@ Average turnaround time: 2.00 units
 ```
 
 **Case 2: Bulk Efficiency**
+
+> This test case demonstrates the program's ability to handle a group of customers arriving at the same time with same direction. It successfully scheduled all customers with full utilization of the stair.
 
 Input:
 ```C
@@ -352,7 +393,8 @@ Average turnaround time: 4.75 units
 
 **Case 3: Starvation**
 
-Input:
+> This test case demonstrates a potential starvation problem. In this scenario the program successfully switched the direction of the stair between groups to ensure fair usage for each direction.
+
 ```C
 globals.num_steps = 3;
 add_customer(1, UP);
@@ -451,8 +493,14 @@ Average turnaround time: 5.00 units
 
 ### Validation
 
+The validity of the program can be done by inspecting the stair status update at the end of each time unit.
+
+The main function will report the status of the stair at the end of a time unit and it is easy to validate if the constraint is violated by inspecting the logs.
+
 ### Performance
 
 **Average Turnaround Time**
+
+On a 10 customer with 3 steps stair scenario, the average turnaround time is about 4.7 units.
 
 ## Contributions
