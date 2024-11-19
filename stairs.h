@@ -28,6 +28,9 @@ typedef struct thread_arg {
 #define MAX_THREADS_COUNT 30
 #define MAX_STAIR_STEPS 13
 
+// Mutex for preventing race condition
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
 // Head of thread array
 pthread_t* tid;
 
@@ -38,10 +41,14 @@ enum DIRECTION {
     DOWN = -1
 };
 
-// Mutex for preventing race condition
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
 // Semaphore for stairs
+struct SEMAPHORES {
+    sem_t* up;
+    sem_t* down;
+};
+
+struct SEMAPHORES semaphores;
+
 sem_t up_sem;
 sem_t down_sem;
 

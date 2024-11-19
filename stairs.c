@@ -41,7 +41,7 @@ void thread_sleep(int duration) {
 // in addition to checking/setting proper variables
 // properly use pthread_mutex_lock/unlock
 
-void semwait(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
+void semwait(p_thread_arg_t *thread_arg) {
 
     int direction = thread_arg->direction;
 
@@ -70,12 +70,12 @@ void semwait(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
             pthread_mutex_lock(&mutex);
             waiting_up++;
             pthread_mutex_unlock(&mutex);
-            sem_wait(up_sem);
+            sem_wait(semaphores.up);
         } else {
             pthread_mutex_lock(&mutex);
             waiting_down++;
             pthread_mutex_unlock(&mutex);
-            sem_wait(down_sem);
+            sem_wait(semaphores.down);
         }
     }
 
@@ -90,7 +90,7 @@ void semwait(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
 // You can write your own sempost function that call sem_post(sem)
 // in addition to checking/setting proper variables
 // properly use pthread_mutex_lock/unlock
-void sempost(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
+void sempost(p_thread_arg_t *thread_arg) {
     pthread_mutex_lock(&mutex);
 
     customer_on_stairs--;
@@ -109,7 +109,7 @@ void sempost(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
             waiting_down -= to_release;
             logger(get_thread_name(thread_arg), "releasing %d down stairs at time %d", to_release, globals.time);
             for (int i = 0; i < to_release; i++) {
-                sem_post(down_sem);
+                sem_post(semaphores.down);
             }
         } else if ((direction == -1 && waiting_up > 0) || (direction == 1 && waiting_down == 0 && waiting_up > 0)) {
             current_direction = UP;
@@ -117,7 +117,7 @@ void sempost(sem_t *up_sem, sem_t *down_sem, p_thread_arg_t *thread_arg) {
             waiting_up -= to_release;
             logger(get_thread_name(thread_arg), "releasing %d up stairs at time %d", to_release, globals.time);
             for (int i = 0; i < to_release; i++) {
-                sem_post(up_sem);
+                sem_post(semaphores.up);
             }
         }
     }
@@ -130,13 +130,13 @@ void *threadfunction(void *vargp) {
     thread->start_time = globals.time;
     logger(get_thread_name(thread), "arrived with direction %s at time %d", direction_to_string(thread->direction), thread->start_time);
 
-    semwait(&up_sem, &down_sem, thread);
+    semwait(thread);
 
     // customer on stairs
     logger(get_thread_name(thread), "started climbing stairs at time %d", globals.time);
     thread_sleep(globals.num_stairs);
 
-    sempost(&up_sem, &down_sem, thread);
+    sempost(thread);
 
     pthread_mutex_lock(&mutex);
     globals.finished_customers++;
@@ -170,8 +170,8 @@ int main(int argc, char *argv[]) {
     }
 
     // sem_init(.....);
-    sem_init(&up_sem, 0, 0);
-    sem_init(&down_sem, 0, 0);
+    semaphores.up = sem_open("/up_sem", O_CREAT, 0644, 0);
+    semaphores.down = sem_open("/down_sem", O_CREAT, 0644, 0);
     tid = malloc(globals.num_customers * sizeof(pthread_t));
 
     //printf("Number of Customers: %d\nNumber of stairs: %d\n", ...., .....);
@@ -192,8 +192,9 @@ int main(int argc, char *argv[]) {
 
     // update the global timer and sleep for a while to let the threads finish their job checking their states
     while (globals.finished_customers < globals.num_customers) {
-        // put main thread to sleep for 1 second so that the threads can finish their jobs updating their states
-        usleep(100 * 1000);
+        // put main thread to sleep for a while so that the threads can finish their jobs updating their states
+        int main_sleep_time_ms = 100;
+        usleep(main_sleep_time_ms * 1000);
         globals.time++;
     }
 
@@ -212,14 +213,16 @@ int main(int argc, char *argv[]) {
         total_time += turnaround;
     }
 
-    printf("Average turnaround time: %.2f seconds\n", total_time / globals.num_customers);
+    printf("Average turnaround time: %.2f units\n", total_time / globals.num_customers);
 
 
     // free every pointer you used malloc for
     free(tid);
     free(threads);
-    sem_destroy(&up_sem);
-    sem_destroy(&down_sem);
+    sem_close(semaphores.up);
+    sem_close(semaphores.down);
+    sem_unlink("/up_sem");
+    sem_unlink("/down_sem");
     pthread_mutex_destroy(&mutex);
 
     return 0;
