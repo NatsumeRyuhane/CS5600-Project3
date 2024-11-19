@@ -21,10 +21,10 @@ typedef struct thread_arg {
 
 
 // global constants
-#define SYSTEM_RANDOM_SEED 0        // Random seed for the system
-#define MAX_CUSTOMERS_COUNT 30      // Maximum number of customers
-#define MAX_STAIR_STEPS 13          // Maximum number of steps of the stair
-#define MAX_ARRIVAL_TIME 4         // Latest arrival time of a customer
+#define SYSTEM_RANDOM_SEED 0      // Random seed for the system
+#define MAX_CUSTOMERS_COUNT 100      // Maximum number of customers
+#define MAX_STAIR_STEPS 25          // Maximum number of steps of the stair
+#define MAX_ARRIVAL_TIME 5         // Latest arrival time of a customer
 #define TIMESLICE_MS 100            // Simulation time slice in microseconds
 
 // Mutex for preventing race condition

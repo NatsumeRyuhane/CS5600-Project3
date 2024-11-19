@@ -55,8 +55,15 @@ void semwait(p_thread_arg_t* thread_arg) {
 
     int thread_direction = thread_arg->direction;
 
+    int waiting;
+    if (thread_direction == UP) {
+        waiting = stair.waiting_up;
+    } else {
+        waiting = stair.waiting_down;
+    }
+
+    pthread_mutex_lock(&mutex);
     if (stair.current_direction == IDLE) {
-        pthread_mutex_lock(&mutex);
         logger(get_thread_name(thread_arg), "stair is IDLE, setting direction to %s and refreshing quota",
                direction_to_string(thread_direction));
         stair.current_direction = thread_direction;
@@ -68,12 +75,7 @@ void semwait(p_thread_arg_t* thread_arg) {
         return;
     } else if (stair.current_direction == thread_direction && stair.directional_quota > 0 &&
                stair.customer_on_stairs < globals.num_steps) {
-        pthread_mutex_lock(&mutex);
-        logger(get_thread_name(thread_arg), "stair still have capacity and directional quota, climbing stairs");
-        stair.customer_on_stairs++;
-        stair.directional_quota--;
-        pthread_mutex_unlock(&mutex);
-        return;
+        logger(get_thread_name(thread_arg), "stair still have capacity and directional quota, put self in queue");
     } else {
         if (stair.current_direction != thread_direction) {
             logger(get_thread_name(thread_arg),
@@ -86,19 +88,17 @@ void semwait(p_thread_arg_t* thread_arg) {
             logger(get_thread_name(thread_arg),
                    "stair is occupied: quota limit reached");
         }
+    }
 
-        // wait case, wrong thread_direction or not space in stair or not quota
-        if (thread_direction == UP) {
-            pthread_mutex_lock(&mutex);
-            stair.waiting_up++;
-            pthread_mutex_unlock(&mutex);
-            sem_wait(semaphores.up);
-        } else {
-            pthread_mutex_lock(&mutex);
-            stair.waiting_down++;
-            pthread_mutex_unlock(&mutex);
-            sem_wait(semaphores.down);
-        }
+    // wait case, wrong thread_direction or not space in stair or not quota
+    if (thread_direction == UP) {
+        stair.waiting_up++;
+        pthread_mutex_unlock(&mutex);
+        sem_wait(semaphores.up);
+    } else {
+        stair.waiting_down++;
+        pthread_mutex_unlock(&mutex);
+        sem_wait(semaphores.down);
     }
 
     logger(get_thread_name(thread_arg), "stair is now available, climbing stairs");
