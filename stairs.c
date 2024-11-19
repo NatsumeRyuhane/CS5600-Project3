@@ -57,7 +57,7 @@ void semwait(p_thread_arg_t* thread_arg) {
 
     if (stair.current_direction == IDLE) {
         pthread_mutex_lock(&mutex);
-        logger(get_thread_name(thread_arg), "stair is IDLE, setting thread_direction to %s",
+        logger(get_thread_name(thread_arg), "stair is IDLE, setting direction to %s and refreshing quota",
                direction_to_string(thread_direction));
         stair.current_direction = thread_direction;
         stair.customer_on_stairs++;
@@ -160,10 +160,9 @@ void* threadfunction(void* vargp) {
     // customer on stairs
     logger(get_thread_name(thread), "started climbing stairs");
     thread_sleep(globals.num_steps);
+    logger(get_thread_name(thread), "finished climbing stairs");
 
     sempost(thread);
-
-    logger(get_thread_name(thread), "finished climbing stairs");
     pthread_mutex_lock(&mutex);
     globals.finished_customers++;
     pthread_mutex_unlock(&mutex);
@@ -244,6 +243,8 @@ int main(int argc, char* argv[]) {
             }
         }
         usleep(TIMESLICE_MS * 1000);
+        logger("main", "Stair status: [Direction: %s, Capacity: %d/%d, Quota: %d, Waiting UP: %d, Waiting DOWN: %d]",
+               direction_to_string(stair.current_direction), stair.customer_on_stairs, globals.num_steps, stair.directional_quota, stair.waiting_up, stair.waiting_down);
         globals.time++;
     }
 
@@ -255,6 +256,7 @@ int main(int argc, char* argv[]) {
     logger("main", "All threads finished. Generating report...");
 
     // printf turnaround time for each thread and average turnaround time
+    printf("\n\n[REPORT]\n");
     double total_time = 0;
     for (int i = 0; i < globals.num_customers; i++) {
         int turnaround = (globals.thread_args[i].end_time - globals.thread_args[i].start_time);
